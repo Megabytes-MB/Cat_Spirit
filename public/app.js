@@ -26,6 +26,11 @@ const outputNode = document.querySelector("#interpret-output");
 const radarNode = document.querySelector("#radar");
 const personaImageDock = document.querySelector("#persona-image-dock");
 
+const DEFAULT_WEIGHTING = {
+  questionnaire: 0.7,
+  experiment: 0.3
+};
+
 let currentProfile = null;
 let currentAssessment = null;
 let questionnaireItems = [];
@@ -199,15 +204,15 @@ function renderQuestionnaire(items) {
         <h3>Q${index + 1}. ${item.text}</h3>
         <div class="qa-options">
           ${item.options
-            .map(
-              (option) => `
+          .map(
+            (option) => `
               <label class="choice">
                 <input type="radio" name="question-${item.id}" value="${option.id}" required />
                 <span>${option.text}</span>
               </label>
             `
-            )
-            .join("")}
+          )
+          .join("")}
         </div>
       </article>
     `
@@ -224,15 +229,15 @@ function renderExperiments(items) {
         <p class="instruction">${item.instruction}</p>
         <div class="qa-options">
           ${item.outcomes
-            .map(
-              (outcome) => `
+          .map(
+            (outcome) => `
               <label class="choice">
                 <input type="radio" name="experiment-${item.id}" value="${outcome.id}" />
                 <span>${outcome.text}</span>
               </label>
             `
-            )
-            .join("")}
+          )
+          .join("")}
         </div>
       </article>
     `
@@ -261,7 +266,6 @@ function collectExperimentAnswers() {
 function renderAssessmentSummary(assessment) {
   const t = assessment.base_temperament;
   const anime = assessment.anime_persona;
-  const weights = assessment.score_debug.weights;
   const doneQ = assessment.score_debug.questionnaire_answered;
   const doneE = assessment.score_debug.experiment_answered;
   const coreTraits = Array.isArray(anime?.core_traits) ? anime.core_traits.join("、") : "无";
@@ -269,15 +273,27 @@ function renderAssessmentSummary(assessment) {
   const quoteText = String(anime?.quote || "").trim();
 
   temperamentView.innerHTML = `
-    <strong>基础性格底色：</strong>${escapeHtml(t.label)}（${escapeHtml(t.description)}）<br />
-    <strong>最终猫格标签：</strong>${escapeHtml(anime?.label || "未判定")}${
-      anime?.label_en ? `（${escapeHtml(anime.label_en)}）` : ""
-    }<br />
-    <strong>核心特质：</strong>${escapeHtml(coreTraits)}<br />
-    ${portraitText ? `${escapeHtml(portraitText)}<br />` : ""}
-    <strong>猫格语录：</strong>${quoteText ? `“${escapeHtml(quoteText)}”` : "—"}<br />
-    <strong>融合权重：</strong>问卷 ${weights.questionnaire} / 实验 ${weights.experiment}<br />
-    <strong>完成度：</strong>问卷 ${doneQ}/10，实验 ${doneE}/2
+    <div class="result-block">
+      <strong>基础性格底色</strong>
+      <p>${escapeHtml(t.label)}（${escapeHtml(t.description)}）</p>
+    </div>
+    <div class="result-block">
+      <strong>最终猫格标签</strong>
+      <p>${escapeHtml(anime?.label || "未判定")}${anime?.label_en ? `（${escapeHtml(anime.label_en)}）` : ""}</p>
+    </div>
+    <div class="result-block">
+      <strong>核心特质</strong>
+      <p>${escapeHtml(coreTraits)}</p>
+    </div>
+    ${portraitText ? `<div class="result-block"><p>${escapeHtml(portraitText)}</p></div>` : ""}
+    <div class="result-block">
+      <strong>猫格语录</strong>
+      <p>${quoteText ? `“${escapeHtml(quoteText)}”` : "—"}</p>
+    </div>
+    <div class="result-block result-meta">
+      <strong>完成度</strong>
+      <p>完成度：问卷 ${doneQ}/10，实验 ${doneE}/2</p>
+    </div>
   `;
 }
 
@@ -321,10 +337,7 @@ async function generateProfile(event) {
     catName: document.querySelector("#cat-name").value.trim() || "Mocha",
     questionnaireAnswers,
     experimentAnswers: collectExperimentAnswers(),
-    weighting: {
-      questionnaire: Number(document.querySelector("#weight-questionnaire").value) || 0.7,
-      experiment: Number(document.querySelector("#weight-experiment").value) || 0.3
-    }
+    weighting: DEFAULT_WEIGHTING
   };
 
   const response = await fetch("/api/personality/assess", {

@@ -1,80 +1,74 @@
 ﻿<!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cyber Cat-Spirit MVP</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <div class="bg-grid"></div>
-    <main class="page">
-      <header class="hero">
-        <p class="eyebrow">Cyber Cat-Spirit</p>
-        <h1>赛博猫灵猫格具象化系统</h1>
-        <p class="subtitle">10 题问卷 + 互动实验，评估猫咪猫格并生成猫格映射。</p>
-      </header>
 
-      <section class="panel">
-        <h2>1) 猫格评估</h2>
-        <form id="assessment-form">
-          <div class="grid">
-            <label>
-              猫咪名称
-              <input id="cat-name" type="text" value="Mocha" />
-            </label>
-            <label>
-              问卷权重
-              <input id="weight-questionnaire" type="number" min="0" max="1" step="0.1" value="0.7" />
-            </label>
-            <label>
-              实验权重
-              <input id="weight-experiment" type="number" min="0" max="1" step="0.1" value="0.3" />
-            </label>
-          </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Cat-Spirit MVP</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
 
-          <div class="block-title">初始定性：10 题问卷</div>
-          <div id="questionnaire-list" class="qa-list"></div>
+<body>
+  <div class="bg-grid"></div>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Cyber Cat-Spirit</p>
+      <h1>赛博猫灵猫格具象化系统</h1>
+      <p class="subtitle">10 题问卷 + 互动实验，评估猫咪猫格并生成猫格映射。</p>
+    </header>
 
-          <div class="block-title">动态修正：互动实验（至少做 1 项更准确）</div>
-          <div id="experiment-list" class="qa-list"></div>
-
-          <button type="submit">生成猫格映射</button>
-        </form>
-      </section>
-
-      <section class="panel two-col">
-        <div>
-          <h2>2) 猫格雷达</h2>
-          <svg id="radar" viewBox="0 0 420 360" role="img" aria-label="猫格雷达图"></svg>
-          <div id="persona-image-dock" class="persona-image-dock" aria-live="polite"></div>
+    <section class="panel">
+      <h2>1) 猫格评估</h2>
+      <form id="assessment-form">
+        <div class="grid">
+          <label>
+            猫咪名称
+            <input id="cat-name" type="text" value="Mocha" />
+          </label>
         </div>
-        <div>
-          <h2>3) 映射结果</h2>
-          <article id="temperament-view" class="insight"></article>
+
+        <div class="block-title">初始定性：10 题问卷</div>
+        <div id="questionnaire-list" class="qa-list"></div>
+
+        <div class="block-title">动态修正：互动实验（至少做 1 项更准确）</div>
+        <div id="experiment-list" class="qa-list"></div>
+
+        <button type="submit">生成猫格映射</button>
+      </form>
+    </section>
+
+    <section class="panel two-col">
+      <div>
+        <h2>2) 猫格雷达</h2>
+        <svg id="radar" viewBox="0 0 420 360" role="img" aria-label="猫格雷达图"></svg>
+        <div id="persona-image-dock" class="persona-image-dock" aria-live="polite"></div>
+      </div>
+      <div>
+        <h2>3) 映射结果</h2>
+        <article id="temperament-view" class="insight"></article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>4) 行为转译</h2>
+      <form id="interpret-form">
+        <div class="grid">
+          <label>
+            行为库动作
+            <select id="action-select"></select>
+          </label>
+          <label>
+            或自定义动作
+            <input id="custom-action" type="text" placeholder="例如：突然盯着门缝低吼" />
+          </label>
         </div>
-      </section>
+        <button type="submit">解释这个行为</button>
+      </form>
+      <article id="interpret-output" class="speech"></article>
+    </section>
+  </main>
 
-      <section class="panel">
-        <h2>4) 行为转译</h2>
-        <form id="interpret-form">
-          <div class="grid">
-            <label>
-              行为库动作
-              <select id="action-select"></select>
-            </label>
-            <label>
-              或自定义动作
-              <input id="custom-action" type="text" placeholder="例如：突然盯着门缝低吼" />
-            </label>
-          </div>
-          <button type="submit">解释这个行为</button>
-        </form>
-        <article id="interpret-output" class="speech"></article>
-      </section>
-    </main>
+  <script type="module" src="/app.js"></script>
+</body>
 
-    <script type="module" src="/app.js"></script>
-  </body>
 </html>
-
