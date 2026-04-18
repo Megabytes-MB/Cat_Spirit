@@ -265,32 +265,90 @@ button:active {
 
 .qa-options {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: 1fr;
 }
 
 .choice {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  background: #fff8fc;
+  min-height: 58px;
+  padding: 16px 16px 16px 52px;
+  border: 1px solid #e9ddea;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fffafe, #fff6fb);
   color: #7b3e5c;
-  line-height: 1.5;
+  line-height: 1.65;
+  box-shadow: inset 0 1px 0 #ffffff;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+  cursor: pointer;
 }
 
 .choice input {
-  margin-top: 4px;
-  accent-color: var(--accent-3);
-  flex: 0 0 auto;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.choice::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #d7b9c9;
+  background: #fff;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.choice::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.choice:has(input:checked)::before {
+  border-color: var(--accent-3);
+  background: #fff7fb;
+  box-shadow: 0 0 0 4px #ffbfd84d;
+}
+
+.choice:has(input:checked)::after {
+  background: var(--accent-3);
+}
+
+.choice:has(input:checked) {
+  border-color: #e7a9c3;
+  background: linear-gradient(180deg, #fff5fa, #fff0f7);
+  box-shadow: 0 10px 24px #f6a6c733;
+}
+
+.choice:hover {
+  transform: translateY(-1px);
+  border-color: #d9b7c8;
+  background: linear-gradient(180deg, #fff8fc, #fff2f8);
+  box-shadow: 0 12px 26px #f1b3cb33;
 }
 
 .choice span {
   min-width: 0;
   flex: 1;
+  padding-top: 1px;
 }
 
 .insight {
