@@ -31,6 +31,10 @@ const llmModelInput = document.querySelector("#llm-model");
 const llmBaseUrlInput = document.querySelector("#llm-base-url");
 const llmApiKeyInput = document.querySelector("#llm-api-key");
 const llmConfigHint = document.querySelector("#llm-config-hint");
+const settingsTrigger = document.querySelector("#settings-trigger");
+const settingsClose = document.querySelector("#settings-close");
+const llmSettingsModal = document.querySelector("#llm-settings-modal");
+const llmSettingsBackdrop = document.querySelector("#llm-settings-backdrop");
 
 const DEFAULT_WEIGHTING = {
   questionnaire: 0.7,
@@ -62,6 +66,38 @@ let questionnaireItems = [];
 let experimentItems = [];
 let personaImageItems = [];
 let interpretationStreamController = null;
+
+function openLlmSettings() {
+  if (!llmSettingsModal) {
+    return;
+  }
+
+  llmSettingsModal.classList.remove("is-hidden");
+  llmSettingsModal.setAttribute("aria-hidden", "false");
+  llmApiKeyInput?.focus();
+}
+
+function closeLlmSettings() {
+  if (!llmSettingsModal) {
+    return;
+  }
+
+  llmSettingsModal.classList.add("is-hidden");
+  llmSettingsModal.setAttribute("aria-hidden", "true");
+  settingsTrigger?.focus();
+}
+
+function bindLlmSettingsModal() {
+  settingsTrigger?.addEventListener("click", openLlmSettings);
+  settingsClose?.addEventListener("click", closeLlmSettings);
+  llmSettingsBackdrop?.addEventListener("click", closeLlmSettings);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && llmSettingsModal && !llmSettingsModal.classList.contains("is-hidden")) {
+      closeLlmSettings();
+    }
+  });
+}
 
 function getProviderDefaults(provider) {
   return PROVIDER_DEFAULTS[provider] || PROVIDER_DEFAULTS.openai;
@@ -602,6 +638,7 @@ async function bootstrap() {
   await Promise.all([loadAssessmentConfig(), loadBehaviors()]);
   restoreLlmFormState();
   bindLlmConfigForm();
+  bindLlmSettingsModal();
   assessmentForm.addEventListener("submit", generateProfile);
   interpretForm.addEventListener("submit", interpretAction);
 }
