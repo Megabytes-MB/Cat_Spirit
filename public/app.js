@@ -25,10 +25,35 @@ const customActionInput = document.querySelector("#custom-action");
 const outputNode = document.querySelector("#interpret-output");
 const radarNode = document.querySelector("#radar");
 const personaImageDock = document.querySelector("#persona-image-dock");
+const llmProviderSelect = document.querySelector("#llm-provider");
+const llmInterfaceSelect = document.querySelector("#llm-interface");
+const llmModelInput = document.querySelector("#llm-model");
+const llmBaseUrlInput = document.querySelector("#llm-base-url");
+const llmApiKeyInput = document.querySelector("#llm-api-key");
+const llmConfigHint = document.querySelector("#llm-config-hint");
 
 const DEFAULT_WEIGHTING = {
   questionnaire: 0.7,
   experiment: 0.3
+};
+
+const LLM_SESSION_KEY = "cyber-cat-spirit-llm-config";
+const PROVIDER_DEFAULTS = {
+  openai: {
+    model: "gpt-4.1-mini",
+    baseUrl: "https://api.openai.com/v1",
+    apiInterface: "responses"
+  },
+  qwen: {
+    model: "qwen-plus",
+    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    apiInterface: "chat_completions"
+  },
+  custom: {
+    model: "",
+    baseUrl: "",
+    apiInterface: "responses"
+  }
 };
 
 let currentProfile = null;
@@ -37,6 +62,151 @@ let questionnaireItems = [];
 let experimentItems = [];
 let personaImageItems = [];
 let interpretationStreamController = null;
+
+function getProviderDefaults(provider) {
+  return PROVIDER_DEFAULTS[provider] || PROVIDER_DEFAULTS.openai;
+}
+
+function readLlmFormState() {
+  const provider = llmProviderSelect?.value || "openai";
+  return {
+    provider,
+    apiInterface: llmInterfaceSelect?.value || getProviderDefaults(provider).apiInterface,
+    model: llmModelInput?.value.trim() || "",
+    baseUrl: llmBaseUrlInput?.value.trim() || "",
+    apiKey: llmApiKeyInput?.value.trim() || ""
+  };
+}
+
+function saveLlmFormState() {
+  if (!window.sessionStorage) {
+    return;
+  }
+
+  window.sessionStorage.setItem(LLM_SESSION_KEY, JSON.stringify(readLlmFormState()));
+}
+
+function setLlmConfigHint(text) {
+  if (llmConfigHint) {
+    llmConfigHint.textContent = text;
+  }
+}
+
+function applyProviderDefaults(provider, { force = false } = {}) {
+  const defaults = getProviderDefaults(provider);
+  if (!llmInterfaceSelect || !llmModelInput || !llmBaseUrlInput) {
+    return;
+  }
+
+  if (force || !llmModelInput.value.trim()) {
+    llmModelInput.value = defaults.model;
+  }
+
+  if (force || !llmBaseUrlInput.value.trim()) {
+    llmBaseUrlInput.value = defaults.baseUrl;
+  }
+
+  if (force || !llmInterfaceSelect.value.trim()) {
+    llmInterfaceSelect.value = defaults.apiInterface;
+  } else if (force) {
+    llmInterfaceSelect.value = defaults.apiInterface;
+  }
+}
+
+function refreshLlmHint() {
+  const { provider, apiKey, baseUrl } = readLlmFormState();
+  if (!apiKey) {
+    setLlmConfigHint("当前未填写 API Key，本次解释会回退到服务器默认配置或本地模板。");
+    return;
+  }
+
+  if (provider === "custom") {
+    setLlmConfigHint(`当前将使用自定义兼容接口：${baseUrl || "未填写 Base URL"}`);
+    return;
+  }
+
+  setLlmConfigHint(`当前将优先使用你填写的 ${provider} 配置。`);
+}
+
+function restoreLlmFormState() {
+  const fallback = {
+    provider: "openai",
+    ...PROVIDER_DEFAULTS.openai
+  };
+  let saved = fallback;
+
+  if (window.sessionStorage) {
+    try {
+      saved = {
+        ...fallback,
+        ...JSON.parse(window.sessionStorage.getItem(LLM_SESSION_KEY) || "{}")
+      };
+    } catch (_error) {
+      saved = fallback;
+    }
+  }
+
+  if (llmProviderSelect) {
+    llmProviderSelect.value = saved.provider || "openai";
+  }
+  applyProviderDefaults(llmProviderSelect?.value || "openai", { force: true });
+
+  if (llmInterfaceSelect && saved.apiInterface) {
+    llmInterfaceSelect.value = saved.apiInterface;
+  }
+  if (llmModelInput) {
+    llmModelInput.value = saved.model || llmModelInput.value;
+  }
+  if (llmBaseUrlInput) {
+    llmBaseUrlInput.value = saved.baseUrl || llmBaseUrlInput.value;
+  }
+  if (llmApiKeyInput) {
+    llmApiKeyInput.value = saved.apiKey || "";
+  }
+
+  refreshLlmHint();
+}
+
+function bindLlmConfigForm() {
+  const inputs = [
+    llmProviderSelect,
+    llmInterfaceSelect,
+    llmModelInput,
+    llmBaseUrlInput,
+    llmApiKeyInput
+  ].filter(Boolean);
+
+  if (llmProviderSelect) {
+    llmProviderSelect.addEventListener("change", () => {
+      applyProviderDefaults(llmProviderSelect.value, { force: true });
+      refreshLlmHint();
+      saveLlmFormState();
+    });
+  }
+
+  for (const input of inputs) {
+    input.addEventListener("input", () => {
+      refreshLlmHint();
+      saveLlmFormState();
+    });
+    input.addEventListener("change", saveLlmFormState);
+  }
+}
+
+function buildLlmPayload() {
+  const config = readLlmFormState();
+  if (!config.apiKey) {
+    return null;
+  }
+
+  return {
+    provider: config.provider,
+    apiKey: config.apiKey,
+    model: config.model,
+    baseUrl: config.baseUrl,
+    apiInterface: config.apiInterface
+  };
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -378,9 +548,10 @@ async function interpretAction(event) {
   }
 
   const customAction = customActionInput.value.trim();
+  const llm = buildLlmPayload();
   const payload = customAction
-    ? { catProfile: currentProfile, actionName: customAction }
-    : { catProfile: currentProfile, actionId: actionSelect.value };
+    ? { catProfile: currentProfile, actionName: customAction, llm }
+    : { catProfile: currentProfile, actionId: actionSelect.value, llm };
 
   outputNode.textContent = "";
   interpretationStreamController = new AbortController();
@@ -429,6 +600,8 @@ async function interpretAction(event) {
 
 async function bootstrap() {
   await Promise.all([loadAssessmentConfig(), loadBehaviors()]);
+  restoreLlmFormState();
+  bindLlmConfigForm();
   assessmentForm.addEventListener("submit", generateProfile);
   interpretForm.addEventListener("submit", interpretAction);
 }

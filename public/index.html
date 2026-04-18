@@ -62,6 +62,42 @@
             <input id="custom-action" type="text" placeholder="例如：突然盯着门缝低吼" />
           </label>
         </div>
+        <div class="block-title">LLM 配置（可选，优先使用你当前填写的 Key）</div>
+        <div class="llm-panel">
+          <p class="helper-text">
+            留空时使用服务器默认配置；填写后仅在当前浏览器会话内生效，不会写入服务器环境变量。
+          </p>
+          <div class="grid">
+            <label>
+              Provider
+              <select id="llm-provider">
+                <option value="openai">OpenAI</option>
+                <option value="qwen">Qwen</option>
+                <option value="custom">Custom Compatible</option>
+              </select>
+            </label>
+            <label>
+              API Interface
+              <select id="llm-interface">
+                <option value="responses">responses</option>
+                <option value="chat_completions">chat_completions</option>
+              </select>
+            </label>
+            <label>
+              Model
+              <input id="llm-model" type="text" value="gpt-4.1-mini" placeholder="例如：gpt-4.1-mini" />
+            </label>
+            <label>
+              Base URL
+              <input id="llm-base-url" type="url" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1" />
+            </label>
+          </div>
+          <label>
+            API Key
+            <input id="llm-api-key" type="password" placeholder="仅保存在当前浏览器会话中" autocomplete="off" />
+          </label>
+          <p id="llm-config-hint" class="helper-text"></p>
+        </div>
         <button type="submit">解释这个行为</button>
       </form>
       <article id="interpret-output" class="speech"></article>

@@ -3,6 +3,7 @@
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_TIMEOUT_MS = 15_000;
+const ALLOWED_REQUEST_BASE_URLS = new Set([DEFAULT_OPENAI_BASE_URL, DEFAULT_QWEN_BASE_URL]);
 
 function getEnvString(key) {
   const value = process.env[key];
@@ -25,7 +26,66 @@ function normalizeInterfaceName(name, fallback) {
   return "responses";
 }
 
-function resolveLlmConfig() {
+function sanitizeRequestLlmConfig(input) {
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+
+  const apiKey = String(input.apiKey || "").trim();
+  if (!apiKey) {
+    return null;
+  }
+
+  const provider = String(input.provider || "custom").trim().toLowerCase();
+  const defaults =
+    provider === "qwen"
+      ? {
+          provider: "qwen",
+          model: "qwen-plus",
+          baseUrl: DEFAULT_QWEN_BASE_URL,
+          apiInterface: "chat_completions"
+        }
+      : provider === "openai"
+        ? {
+            provider: "openai",
+            model: "gpt-4.1-mini",
+            baseUrl: DEFAULT_OPENAI_BASE_URL,
+            apiInterface: "responses"
+          }
+        : {
+            provider: "custom",
+            model: "gpt-4.1-mini",
+            baseUrl: DEFAULT_OPENAI_BASE_URL,
+            apiInterface: "responses"
+          };
+
+  const baseUrl = normalizeBaseUrl(String(input.baseUrl || defaults.baseUrl).trim(), defaults.baseUrl);
+  if (!ALLOWED_REQUEST_BASE_URLS.has(baseUrl)) {
+    return {
+      error: "Unsupported llm.baseUrl. Only official OpenAI and DashScope compatible endpoints are allowed."
+    };
+  }
+
+  return {
+    enabled: true,
+    provider: defaults.provider,
+    apiKey,
+    model: String(input.model || defaults.model).trim() || defaults.model,
+    baseUrl,
+    apiInterface: normalizeInterfaceName(input.apiInterface, defaults.apiInterface),
+    timeoutMs: DEFAULT_TIMEOUT_MS
+  };
+}
+
+function resolveLlmConfig(requestConfig) {
+  const requestOverride = sanitizeRequestLlmConfig(requestConfig);
+  if (requestOverride?.error) {
+    return requestOverride;
+  }
+  if (requestOverride?.enabled) {
+    return requestOverride;
+  }
+
   const genericApiKey = getEnvString("LLM_API_KEY");
   if (genericApiKey) {
     return {
@@ -85,6 +145,14 @@ export function getLlmRuntimeSummary() {
     baseUrl: config.baseUrl,
     apiInterface: config.apiInterface
   };
+}
+
+export function validateLlmRequestConfig(requestConfig) {
+  const config = resolveLlmConfig(requestConfig);
+  if (config?.error) {
+    return config.error;
+  }
+  return "";
 }
 
 function scoreBand(score) {
@@ -253,8 +321,11 @@ function extractStreamDelta(data, config) {
     : extractResponsesDelta(data);
 }
 
-async function callLLMStream(prompt, onDelta) {
-  const config = resolveLlmConfig();
+async function callLLMStream(prompt, onDelta, requestConfig) {
+  const config = resolveLlmConfig(requestConfig);
+  if (config.error) {
+    throw new Error(config.error);
+  }
   if (!config.enabled || typeof onDelta !== "function") {
     return "";
   }
@@ -337,8 +408,11 @@ async function callLLMStream(prompt, onDelta) {
   }
 }
 
-async function callLLM(prompt) {
-  const config = resolveLlmConfig();
+async function callLLM(prompt, requestConfig) {
+  const config = resolveLlmConfig(requestConfig);
+  if (config.error) {
+    throw new Error(config.error);
+  }
   if (!config.enabled) {
     return "";
   }
@@ -404,9 +478,9 @@ function fallbackInterpretation({ catProfile, actionName, baseMeaning }) {
   )}。${advice}`;
 }
 
-export async function generateInterpretation({ catProfile, actionName, baseMeaning }) {
+export async function generateInterpretation({ catProfile, actionName, baseMeaning, llmConfig }) {
   const prompt = buildInterpretPrompt({ catProfile, actionName, baseMeaning });
-  const llmText = await callLLM(prompt);
+  const llmText = await callLLM(prompt, llmConfig);
   const line = llmText || fallbackInterpretation({ catProfile, actionName, baseMeaning });
 
   return {
@@ -415,9 +489,9 @@ export async function generateInterpretation({ catProfile, actionName, baseMeani
   };
 }
 
-export async function streamInterpretation({ catProfile, actionName, baseMeaning, onDelta }) {
+export async function streamInterpretation({ catProfile, actionName, baseMeaning, onDelta, llmConfig }) {
   const prompt = buildInterpretPrompt({ catProfile, actionName, baseMeaning });
-  const llmText = await callLLMStream(prompt, onDelta);
+  const llmText = await callLLMStream(prompt, onDelta, llmConfig);
 
   if (llmText) {
     return {

@@ -184,6 +184,21 @@ body::after {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.llm-panel {
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fffafe, #fff3f9);
+}
+
+.helper-text {
+  margin: 0 0 10px;
+  color: #a86180;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 label {
   display: grid;
   gap: 6px;

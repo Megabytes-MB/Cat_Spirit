@@ -5,7 +5,12 @@ import { dirname, extname, isAbsolute, join, normalize, relative, resolve } from
 import { fileURLToPath } from "node:url";
 import { mapAvatarByPersonality } from "./src/avatar-mapping.js";
 import { BEHAVIOR_LIBRARY, findBehavior } from "./src/behavior-library.js";
-import { generateInterpretation, getLlmRuntimeSummary, streamInterpretation } from "./src/interpreter.js";
+import {
+  generateInterpretation,
+  getLlmRuntimeSummary,
+  streamInterpretation,
+  validateLlmRequestConfig
+} from "./src/interpreter.js";
 import { buildPersonaImageLibrary } from "./src/persona-image-library.js";
 import {
   calculatePersonalityScores,
@@ -197,6 +202,11 @@ const server = createServer(async (req, res) => {
         sendJson(res, 400, { error: "catProfile.scores is required." });
         return;
       }
+      const llmConfigError = validateLlmRequestConfig(body.llm);
+      if (llmConfigError) {
+        sendJson(res, 400, { error: llmConfigError });
+        return;
+      }
 
       const behavior =
         findBehavior({ actionId: body.actionId, actionName: body.actionName }) || {
@@ -208,7 +218,8 @@ const server = createServer(async (req, res) => {
       const interpretation = await generateInterpretation({
         catProfile,
         actionName: behavior.action_name,
-        baseMeaning: behavior.base_meaning
+        baseMeaning: behavior.base_meaning,
+        llmConfig: body.llm
       });
 
       sendJson(res, 200, {
@@ -224,6 +235,11 @@ const server = createServer(async (req, res) => {
       const catProfile = body.catProfile;
       if (!catProfile?.scores) {
         sendJson(res, 400, { error: "catProfile.scores is required." });
+        return;
+      }
+      const llmConfigError = validateLlmRequestConfig(body.llm);
+      if (llmConfigError) {
+        sendJson(res, 400, { error: llmConfigError });
         return;
       }
 
@@ -245,6 +261,7 @@ const server = createServer(async (req, res) => {
         catProfile,
         actionName: behavior.action_name,
         baseMeaning: behavior.base_meaning,
+        llmConfig: body.llm,
         onDelta: (chunk) => {
           if (!res.writableEnded) {
             res.write(chunk);
@@ -260,6 +277,11 @@ const server = createServer(async (req, res) => {
 
     if (method === "POST" && pathname === "/api/workflow/demo") {
       const body = await readJsonBody(req);
+      const llmConfigError = validateLlmRequestConfig(body.llm);
+      if (llmConfigError) {
+        sendJson(res, 400, { error: llmConfigError });
+        return;
+      }
       const scores = calculatePersonalityScores(
         body.traitObservations,
         Number(body.questionMaxScore) || 5
@@ -275,7 +297,8 @@ const server = createServer(async (req, res) => {
       const interpretation = await generateInterpretation({
         catProfile: profileResult.cat_profile,
         actionName: behavior.action_name,
-        baseMeaning: behavior.base_meaning
+        baseMeaning: behavior.base_meaning,
+        llmConfig: body.llm
       });
 
       sendJson(res, 200, {
